@@ -211,9 +211,10 @@ if solve:
             fig.update_layout(
                 width=750,
                 height=500,
+                
                 showlegend=False,
-                xaxis_title="X Coordinate (units)",
-                yaxis_title="Y Coordinate (units)",
+                xaxis_title="X Coordinate (KM)",
+                yaxis_title="Y Coordinate (KM)",
                 xaxis=dict(showgrid=False, zeroline=False),
                 yaxis=dict(showgrid=False, zeroline=False)
             )
