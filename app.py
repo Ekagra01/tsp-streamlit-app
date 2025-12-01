@@ -97,19 +97,6 @@ if uploaded_file is not None:
 
 
 # ----------------------------------------------------------
-#         SHOW MATRIX CURRENTLY IN USE (DEFAULT OR UPLOADED)
-# ----------------------------------------------------------
-
-st.markdown(
-    "<h3 style='text-align:center;'>Distance Matrix In Use</h3>",
-    unsafe_allow_html=True
-)
-
-df_display = pd.DataFrame(distance_matrix, index=cities, columns=cities)
-st.table(df_display)
-
-
-# ----------------------------------------------------------
 #             SELECT STARTING CITY
 # ----------------------------------------------------------
 
@@ -199,16 +186,14 @@ if solve:
 
             coords = generate_coordinates(len(cities))
 
-            # Coordinates in order of route
             route_x = [coords[i][0] for i in route]
             route_y = [coords[i][1] for i in route]
 
-            # Labels such as "1. Delhi", "2. Agra", etc.
+            # Labels: "1. Delhi", "2. Agra", ...
             arrival_labels = [f"{idx+1}. {cities[city]}" for idx, city in enumerate(route)]
 
             fig = go.Figure()
 
-            # Draw route line + markers + arrival numbers
             fig.add_trace(go.Scatter(
                 x=route_x,
                 y=route_y,
