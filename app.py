@@ -29,7 +29,7 @@ st.markdown(
 
 
 # ----------------------------------------------------------
-#               DEFAULT DISTANCE MATRIX
+#           DEFAULT DISTANCE MATRIX (ALWAYS SHOWN FIRST)
 # ----------------------------------------------------------
 
 default_matrix = [
@@ -44,23 +44,30 @@ default_matrix = [
 
 default_cities = ["Delhi", "Agra", "Jaipur", "Chandigarh", "Lucknow", "Dehradun", "Kanpur"]
 
-
 distance_matrix = default_matrix
 cities = default_cities
 use_uploaded = False
 
+st.markdown(
+    "<h3 style='text-align:center;'>Default Distance Matrix (km)</h3>",
+    unsafe_allow_html=True
+)
+
+df_default = pd.DataFrame(default_matrix, index=default_cities, columns=default_cities)
+st.table(df_default)
+
 
 # ----------------------------------------------------------
-#               OPTIONAL CSV UPLOAD
+#               OPTIONAL CSV UPLOAD COMES AFTER DEFAULT
 # ----------------------------------------------------------
 
 st.markdown(
-    "<h3 style='text-align:center;'>Upload Distance Matrix (Optional)</h3>",
+    "<h3 style='text-align:center;'>Upload Custom Distance Matrix (Optional)</h3>",
     unsafe_allow_html=True
 )
 
 uploaded_file = st.file_uploader(
-    "Upload a CSV containing a distance matrix (square matrix only)",
+    "Upload a CSV containing a square distance matrix",
     type=["csv"]
 )
 
@@ -68,9 +75,10 @@ if uploaded_file is not None:
     df_uploaded = pd.read_csv(uploaded_file, header=None)
 
     if df_uploaded.shape[0] != df_uploaded.shape[1]:
-        st.error("Matrix must be square (n×n). Please upload again.")
+        st.error("Uploaded matrix must be square (n×n).")
     else:
         st.success("Matrix uploaded successfully!")
+
         n = df_uploaded.shape[0]
 
         st.markdown(
@@ -80,7 +88,7 @@ if uploaded_file is not None:
 
         cities = []
         for i in range(n):
-            city = st.text_input(f"City {i+1} name:", key=f"city_{i}")
+            city = st.text_input(f"City {i+1} Name:", key=f"city_{i}")
             cities.append(city)
 
         if all(cities):
@@ -89,7 +97,7 @@ if uploaded_file is not None:
 
 
 # ----------------------------------------------------------
-#            DISPLAY MATRIX BEING USED
+#         SHOW MATRIX CURRENTLY IN USE (DEFAULT OR UPLOADED)
 # ----------------------------------------------------------
 
 st.markdown(
@@ -124,14 +132,10 @@ with col2:
 
 
 # ----------------------------------------------------------
-#               FUNCTION TO GENERATE COORDS
+#         FUNCTION TO GENERATE VISUALIZATION COORDS
 # ----------------------------------------------------------
 
 def generate_coordinates(n):
-    """
-    Generate random coordinates purely for visualization purposes.
-    (Distance matrix is NOT based on these coordinates)
-    """
     np.random.seed(42)
     return np.random.rand(n, 2) * 100
 
@@ -148,7 +152,7 @@ if solve:
         route, total_dist = solve_tsp(distance_matrix, start_node=start_index)
 
         if route is None:
-            st.error("No feasible solution found by OR-Tools.")
+            st.error("No feasible solution found.")
         else:
             route_names = [cities[i] for i in route]
 
@@ -183,8 +187,9 @@ if solve:
             )
             st.table(step_df)
 
+
             # ----------------------------------------------------------
-            #                ROUTE VISUALIZATION (PLOTLY)
+            #                ROUTE VISUALIZATION WITH NUMBERS
             # ----------------------------------------------------------
 
             st.markdown(
@@ -194,27 +199,24 @@ if solve:
 
             coords = generate_coordinates(len(cities))
 
+            # Coordinates in order of route
             route_x = [coords[i][0] for i in route]
             route_y = [coords[i][1] for i in route]
 
+            # Labels such as "1. Delhi", "2. Agra", etc.
+            arrival_labels = [f"{idx+1}. {cities[city]}" for idx, city in enumerate(route)]
+
             fig = go.Figure()
 
-            # Draw route line
+            # Draw route line + markers + arrival numbers
             fig.add_trace(go.Scatter(
-                x=route_x, y=route_y,
-                mode='lines+markers',
+                x=route_x,
+                y=route_y,
+                mode='lines+markers+text',
                 line=dict(width=3),
-                marker=dict(size=10),
-                name='Route'
-            ))
-
-            # City names
-            fig.add_trace(go.Scatter(
-                x=route_x, y=route_y,
-                mode='text',
-                text=[cities[i] for i in route],
-                textposition="top center",
-                name='City Names'
+                marker=dict(size=12),
+                text=arrival_labels,
+                textposition="top center"
             ))
 
             fig.update_layout(
