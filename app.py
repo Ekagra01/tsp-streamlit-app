@@ -1,8 +1,13 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
 from tsp_solver import solve_tsp
 
-# --------------------------- CENTERED HEADERS ---------------------------
+
+# ----------------------------------------------------------
+#                   CENTERED HEADERS
+# ----------------------------------------------------------
 
 st.markdown(
     """
@@ -22,18 +27,12 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.write("""
-This application solves the Travelling Salesman Problem using Google OR-Tools.
-The model ensures:
-1. Each city has exactly one outgoing path  
-2. Each city has exactly one incoming path  
-3. All decision variables x(i,j) are binary  
-Subtour elimination is handled internally by OR-Tools.
-""")
 
-# --------------------------- DISTANCE MATRIX ---------------------------
+# ----------------------------------------------------------
+#               DEFAULT DISTANCE MATRIX
+# ----------------------------------------------------------
 
-distance_matrix = [
+default_matrix = [
     [0,   233, 281, 260, 500, 250, 450],  # Delhi
     [233,   0, 240, 400, 335, 350, 260],  # Agra
     [281, 240,   0, 520, 590, 520, 570],  # Jaipur
@@ -43,30 +42,68 @@ distance_matrix = [
     [450, 260, 570, 700,  90, 600,   0],  # Kanpur
 ]
 
-cities = ["Delhi", "Agra", "Jaipur", "Chandigarh", "Lucknow", "Dehradun", "Kanpur"]
+default_cities = ["Delhi", "Agra", "Jaipur", "Chandigarh", "Lucknow", "Dehradun", "Kanpur"]
+
+
+distance_matrix = default_matrix
+cities = default_cities
+use_uploaded = False
+
+
+# ----------------------------------------------------------
+#               OPTIONAL CSV UPLOAD
+# ----------------------------------------------------------
 
 st.markdown(
-    "<h3 style='text-align:center;'>Distance Matrix (km)</h3>",
+    "<h3 style='text-align:center;'>Upload Distance Matrix (Optional)</h3>",
     unsafe_allow_html=True
 )
 
-# Center the DataFrame
+uploaded_file = st.file_uploader(
+    "Upload a CSV containing a distance matrix (square matrix only)",
+    type=["csv"]
+)
+
+if uploaded_file is not None:
+    df_uploaded = pd.read_csv(uploaded_file, header=None)
+
+    if df_uploaded.shape[0] != df_uploaded.shape[1]:
+        st.error("Matrix must be square (n×n). Please upload again.")
+    else:
+        st.success("Matrix uploaded successfully!")
+        n = df_uploaded.shape[0]
+
+        st.markdown(
+            "<h4 style='text-align:center;'>Enter City Names (In Order)</h4>",
+            unsafe_allow_html=True
+        )
+
+        cities = []
+        for i in range(n):
+            city = st.text_input(f"City {i+1} name:", key=f"city_{i}")
+            cities.append(city)
+
+        if all(cities):
+            distance_matrix = df_uploaded.values.tolist()
+            use_uploaded = True
+
+
+# ----------------------------------------------------------
+#            DISPLAY MATRIX BEING USED
+# ----------------------------------------------------------
+
 st.markdown(
-    """
-    <style>
-        .center-table {
-            margin-left: auto;
-            margin-right: auto;
-        }
-    </style>
-    """,
+    "<h3 style='text-align:center;'>Distance Matrix In Use</h3>",
     unsafe_allow_html=True
 )
 
-df = pd.DataFrame(distance_matrix, index=cities, columns=cities)
-st.table(df.style.set_table_attributes("class='center-table'"))
+df_display = pd.DataFrame(distance_matrix, index=cities, columns=cities)
+st.table(df_display)
 
-# --------------------------- SELECT START CITY ---------------------------
+
+# ----------------------------------------------------------
+#             SELECT STARTING CITY
+# ----------------------------------------------------------
 
 st.markdown(
     "<h4 style='text-align:center;'>Select Starting City</h4>",
@@ -76,50 +113,116 @@ st.markdown(
 start_city = st.selectbox("", cities, index=0)
 start_index = cities.index(start_city)
 
-# --------------------------- CENTERED BUTTON ---------------------------
+
+# ----------------------------------------------------------
+#                   SOLVE BUTTON
+# ----------------------------------------------------------
 
 col1, col2, col3 = st.columns([1, 1, 1])
 with col2:
     solve = st.button("Solve TSP")
 
-# --------------------------- SOLUTION OUTPUT ---------------------------
+
+# ----------------------------------------------------------
+#               FUNCTION TO GENERATE COORDS
+# ----------------------------------------------------------
+
+def generate_coordinates(n):
+    """
+    Generate random coordinates purely for visualization purposes.
+    (Distance matrix is NOT based on these coordinates)
+    """
+    np.random.seed(42)
+    return np.random.rand(n, 2) * 100
+
+
+# ----------------------------------------------------------
+#                     SOLVER OUTPUT
+# ----------------------------------------------------------
 
 if solve:
-    route, total_dist = solve_tsp(distance_matrix, start_node=start_index)
 
-    if route is None:
-        st.error("No solution found.")
+    if use_uploaded and any(c == "" for c in cities):
+        st.error("Please enter all city names.")
     else:
-        route_names = [cities[i] for i in route]
+        route, total_dist = solve_tsp(distance_matrix, start_node=start_index)
 
-        st.markdown(
-            f"""
-            <h3 style='text-align:center; color:green;'>
-                Optimal Route (Starting from {start_city})
-            </h3>
-            """,
-            unsafe_allow_html=True
-        )
+        if route is None:
+            st.error("No feasible solution found by OR-Tools.")
+        else:
+            route_names = [cities[i] for i in route]
 
-        st.markdown(
-            f"<h4 style='text-align:center;'>{' → '.join(route_names)}</h4>",
-            unsafe_allow_html=True
-        )
+            st.markdown(
+                f"""
+                <h3 style='text-align:center; color:green;'>
+                    Optimal Route (Starting from {start_city})
+                </h3>
+                """,
+                unsafe_allow_html=True
+            )
 
-        st.markdown(
-            f"<h4 style='text-align:center;'>Total Distance: <b>{total_dist} km</b></h4>",
-            unsafe_allow_html=True
-        )
+            st.markdown(
+                f"<h4 style='text-align:center;'>{' → '.join(route_names)}</h4>",
+                unsafe_allow_html=True
+            )
 
-        # Centered Route Table
-        st.markdown(
-            "<h4 style='text-align:center;'>Route Details</h4>",
-            unsafe_allow_html=True
-        )
+            st.markdown(
+                f"<h4 style='text-align:center;'>Total Distance: <b>{total_dist} km</b></h4>",
+                unsafe_allow_html=True
+            )
 
-        step_df = pd.DataFrame({
-            "Step": list(range(len(route_names))),
-            "City": route_names
-        })
+            # Route Table
+            step_df = pd.DataFrame({
+                "Step": list(range(len(route_names))),
+                "City": route_names
+            })
 
-        st.table(step_df.style.set_table_attributes("class='center-table'"))
+            st.markdown(
+                "<h4 style='text-align:center;'>Route Details</h4>",
+                unsafe_allow_html=True
+            )
+            st.table(step_df)
+
+            # ----------------------------------------------------------
+            #                ROUTE VISUALIZATION (PLOTLY)
+            # ----------------------------------------------------------
+
+            st.markdown(
+                "<h3 style='text-align:center;'>Route Visualization</h3>",
+                unsafe_allow_html=True
+            )
+
+            coords = generate_coordinates(len(cities))
+
+            route_x = [coords[i][0] for i in route]
+            route_y = [coords[i][1] for i in route]
+
+            fig = go.Figure()
+
+            # Draw route line
+            fig.add_trace(go.Scatter(
+                x=route_x, y=route_y,
+                mode='lines+markers',
+                line=dict(width=3),
+                marker=dict(size=10),
+                name='Route'
+            ))
+
+            # City names
+            fig.add_trace(go.Scatter(
+                x=route_x, y=route_y,
+                mode='text',
+                text=[cities[i] for i in route],
+                textposition="top center",
+                name='City Names'
+            ))
+
+            fig.update_layout(
+                width=750,
+                height=500,
+                showlegend=False,
+                xaxis=dict(showgrid=False, zeroline=False),
+                yaxis=dict(showgrid=False, zeroline=False)
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
