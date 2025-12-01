@@ -124,7 +124,7 @@ with col2:
 
 def generate_coordinates(n):
     np.random.seed(42)
-    return np.random.rand(n, 2) * 100
+    return np.random.rand(n, 2) * 100   # 100 x 100 coordinate grid
 
 
 # ----------------------------------------------------------
@@ -162,7 +162,11 @@ if solve:
                 unsafe_allow_html=True
             )
 
-            # Route Table
+
+            # ----------------------------------------------------------
+            #                     ROUTE DETAILS TABLE
+            # ----------------------------------------------------------
+
             step_df = pd.DataFrame({
                 "Step": list(range(len(route_names))),
                 "City": route_names
@@ -176,7 +180,7 @@ if solve:
 
 
             # ----------------------------------------------------------
-            #                ROUTE VISUALIZATION WITH NUMBERS
+            #           ROUTE VISUALIZATION WITH AXIS UNITS
             # ----------------------------------------------------------
 
             st.markdown(
@@ -208,6 +212,8 @@ if solve:
                 width=750,
                 height=500,
                 showlegend=False,
+                xaxis_title="X Coordinate (units)",
+                yaxis_title="Y Coordinate (units)",
                 xaxis=dict(showgrid=False, zeroline=False),
                 yaxis=dict(showgrid=False, zeroline=False)
             )
